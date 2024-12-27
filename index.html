@@ -1,0 +1,534 @@
+<html lang="en">
+<head>
+    <!-- Pico.css -->
+    <link rel="stylesheet" href="https://unpkg.com/@picocss/pico@latest/css/pico.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script
+        src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+        crossorigin="anonymous"></script>
+</head>
+<body id="body" style="overflow-y:hidden; overflow-x: hidden;">
+    
+<main class="container">
+    <div id="loading" class="custom-center">
+        <section style="width: 50%; text-align: center;">
+            <div class="progress_wrapper">
+                <h2 id="progress_text1"></h2>
+                <h2 id="progress_text2"></h2>
+            </div>
+            <div style="height:40px;"></div>
+            <progress id="progress-2"></progress>
+        </section>
+    </div>
+    <div id="login_register" class="custom-center" style="display:none; opacity: 0;">
+        <section style="width: 100%; text-align: center;">
+            <div id="login_form">
+                <h2>Login to your Account</h2>
+                <label for="text">Email</label>
+                <input type="email" id="login_email" name="login_email" placeholder="Email" onblur="verify_email_login()" onfocus="reset_email_login()"/>
+                <label for="text">Password</label>
+                <input type="password" id="login_password" name="login_password" placeholder="Password" onblur="verify_password_login()" onfocus="reset_password_login()"/>
+                
+                <input type="submit" value="Login" onclick='
+
+                event.preventDefault();
+
+                verify_email_login();
+                verify_password_login();
+                
+                if(document.getElementById("login_email").getAttribute("aria-invalid") == "true" ||
+                    document.getElementById("login_password").getAttribute("aria-invalid") == "true") {
+                    show_error("Invalid Email or password.");
+                    return;
+                }
+                
+                app.login(document.getElementById("login_email").value, document.getElementById("login_password").value).then(success => {
+                    if(success)
+                        account(false);
+                    else
+                        show_error("Incorrect Email or Password.");
+                })' />
+                <label style="user-select: none; font-style: italic; cursor:pointer;" id="login_register_switch" onclick='
+                
+                document.getElementById("login_form").style.opacity = 0;
+                setTimeout(() => {
+                    document.getElementById("login_form").style.display = "none";
+                    document.getElementById("register_form").style.display = "";
+                    setTimeout(() => {
+                        document.getElementById("register_form").style.opacity = 1;
+                    }, 50)
+                }, 250)'>Register instead</label>
+            </div>
+            <div id="register_form" style="opacity: 0; display:none;">
+                <h2>Register a new Account</h2>
+                <label for="text">Email</label>
+                <input type="email" id="register_email" name="register_email" placeholder="Email" onblur="verify_email_register()" onfocus="reset_email_register()"/>
+                <label for="text">Password</label>
+                <input type="password" id="register_password" name="register_password" placeholder="Password" onblur="verify_password_register()" onfocus="reset_password_register()"/>
+                <label for="text">Username</label>
+                <input type="text" id="register_uname" name="register_uname" placeholder="Username" onblur="verify_username_register()" onfocus="reset_username_register()"/>
+
+                <label for="text">Steam Account</label>
+                <fieldset role="group">
+                    <input type="text" id="register_steam_acc" name="register_steam_acc" placeholder="Steam Account" disabled/>
+                    <button aria-busy="false" onclick="steam()" id="link_steam_btn" style="white-space: nowrap;">Link Steam account</button>
+                </fieldset>
+                
+                <input type="submit" value="Register" onclick='
+
+                event.preventDefault();
+
+                verify_email_register();
+                verify_password_register();
+                verify_username_register();
+                
+                if(document.getElementById("register_email").getAttribute("aria-invalid") == "true" ||
+                    document.getElementById("register_password").getAttribute("aria-invalid") == "true" ||
+                    document.getElementById("register_uname").getAttribute("aria-invalid") == "true") {
+                    show_error("Invalid Email, password or username.");
+                    return;
+                }
+
+                let str_steam_id = document.getElementById("register_steam_acc").value.split(" (")[1].split(")")[0];
+                let steam_id64 = Number(str_steam_id);
+
+                app.register(document.getElementById("register_email").value, document.getElementById("register_password").value, document.getElementById("register_uname").value, steam_id64).then(success => {
+                    app.debug("register returned")
+                    if(success)
+                        account(true);
+                    else
+                        show_error("Incorrect Email or Password.");
+                });' />
+                <label style="user-select: none; font-style: italic; cursor:pointer;" id="login_register_switch_1" onclick='
+                
+                document.getElementById("register_form").style.opacity = 0;
+                setTimeout(() => {
+                    document.getElementById("register_form").style.display = "none";
+                    document.getElementById("login_form").style.display = "";
+                    setTimeout(() => {
+                        document.getElementById("login_form").style.opacity = 1;
+                    }, 50)
+                }, 250)'>Login instead</label>
+            </div>
+        </section>
+    </div>
+    <div id="dashboard" class="" style="display:none; opacity: 0;">
+        <div style="width: 100vw; position: fixed; top: 0; left: 0; backdrop-filter: blur(10px); background-color: rgba(0, 0, 0, 0.35); z-index: 999999;" id="header_container">
+            <section style="width: calc(100% - 30px); position: fixed; top: 0; left: 15px;" id="header" class="topnav">
+                <nav>
+                    <div style="display: flex; flex-direction: column; align-items: flex-start; margin-top: calc(var(--pico-typography-spacing-vertical) * 0.25);">
+                        <div style="height: calc(var(--pico-typography-spacing-vertical) * 0.25);"></div>
+                        <strong id="username" style="color: white; font-weight: bold; margin-top: calc(var(--pico-typography-spacing-vertical) * 0.25);"></strong>
+                        <div style="display: flex;">
+                            <img id="rank_image" src="" style="width: 40px; height: 16px; margin-top: 5px; margin-right: 6px;">
+                            <span id="rank_name" style="font-size: 12px; margin-top: 3.5px;"></span>
+                        </div>
+                    </div>
+                    <ul>
+                        <li><button onclick="transition_to('pdashboard')" id="dashboardbtn" class="primary">Dashboard</button></li>
+                        <li><button onclick="transition_to('matchmaking')" id="mmbtn" class="primary">Matchmaking</button></li>
+                        <li><button onclick="transition_to('settings')" id="settingsbtn" class="primary">Settings</button></li>
+                    </ul>
+                </nav>
+            </section>
+        </div>
+
+        <div id="content_container">
+            <div id="pdashboard" class="content_page">
+                <h1>Dashboard</h1>
+                <div style="display: grid; grid-template-columns: auto auto; gap: 15px; width: calc(100% - 30px); height: 100%; margin-left: 15px;">
+                    <div id="stats_container" style="width: 400px; height: 310px;">
+                        <article id="stats_spin" aria-busy="true" style="width: 400px; height: 310px; display: flex; justify-content: center; align-items: center; opacity:1;"></article>
+                        <article id="stats_data" style="width: 400px; height: 310px; opacity: 0; margin-top: -329px; z-index: 999;">
+                            <h3>Your Statistics</h3>
+                            <p id="total_games_played">Total Games played: </p>
+                            <p id="total_matches_won">Total Matches won: </p>
+                            <p id="total_matches_lost">Total Matches lost: </p>
+                            <p id="total_matches_tied">Total Matches tied: </p>
+                            <p id="avg_kd_ratio">Average K/D Ratio: </p>
+                        </article>
+                    </div>
+                    <div id="friends_container" style="width: 400px; height: 310px;">
+                        <article id="friends_spin" aria-busy="true" style="width: 400px; height: 310px; display: flex; justify-content: center; align-items: center; opacity:1;"></article>
+                        <article id="friends_data" style="width: 400px; height: 310px; opacity: 0; margin-top: -329px; z-index: 999;">
+                            <h3>Your Friends</h3>
+                            <p>Looks like you, like me, don't have any friends.</p>
+                        </article>
+                    </div>
+                </div>
+            </div>
+            <div id="matchmaking" class="content_page" style="opacity: 0;">
+                <h1>Matchmaking</h1>
+                <div id="mm_container" style="width: 100%;">
+                    <div id="maps_container" style="display: grid; width:98vw; grid-template-columns: repeat(auto-fit, minmax(298px, 1fr)); gap: 15px;">
+                    </div>
+                    <div>
+                        <button onclick="" id="queuebtn" class="primary" style="width: 120px; text-align: center; letter-spacing: .3rem;">GO</button>
+                    </div>
+                </div>
+            </div>
+            <div id="settings" class="content_page" style="opacity: 0;">
+                <h1>Account Settings</h1>
+            </div>
+        </div>
+    </div>
+</main>
+
+<dialog id="errorModal">
+  <article>
+    <header>
+      <button aria-label="Close" rel="prev" onclick="errorModal.close(); error_dialog_closed();"></button>
+      <h3>Looks like that didn't work!</h3>
+    </header>
+    <p id="errorModal_text"></p>
+    <footer>
+        <button autofocus role="button" onclick="errorModal.close(); error_dialog_closed();">Close</button>
+    </footer>
+  </article>
+</dialog>
+    
+</body>
+
+<script>
+    let exit_on_error_dialog_close = false;
+    let steam_id = ""
+    let global_username = ""
+    let global_rank_name = ""
+    let global_rank_url = ""
+    let current_page = "pdashboard"
+
+    function error_dialog_closed() {
+        if(exit_on_error_dialog_close)
+            app.exit();
+    }
+
+    function transition_to(page) {
+        if(page == current_page)
+            return;
+
+        if(page == "matchmaking")
+            document.getElementById("body").style.overflowY = "";
+        else
+            document.getElementById("body").style.overflowY = "hidden";
+
+        document.getElementById(current_page).style.opacity = 0;
+        current_page = page;
+        document.getElementById(page).style.opacity = 1;
+    }
+
+    function steam() {
+        document.getElementById("link_steam_btn").setAttribute("aria-busy", "true");
+        app.steam_login().then(result => {
+            if(result == "") {
+                show_error("Error! Failed to log into Steam, please try again.")
+                document.getElementById("link_steam_btn").setAttribute("aria-busy", "false");
+                return;
+            }
+
+            steam_id = result.split("^")[1]
+            let steam_uname = result.split("^")[0].replace("\b", "^")
+            document.getElementById("register_steam_acc").value = steam_uname + " (" + steam_id + ")"
+            document.getElementById("link_steam_btn").setAttribute("aria-busy", "false");
+        })
+    }
+
+    async function load_profile_data() {
+        document.getElementById("total_games_played").innerText += await app.total_games_played();
+        document.getElementById("total_matches_tied").innerText += await app.total_matches_tied();
+        document.getElementById("total_matches_lost").innerText += await app.total_matches_lost();
+        document.getElementById("total_matches_won").innerText += await app.total_matches_won();
+        document.getElementById("avg_kd_ratio").innerText += await app.avg_kd_ratio();
+    }
+
+    function account() {
+        document.getElementById('login_register').style.opacity = 0;
+        setTimeout(() => {
+            document.getElementById('login_register').style.display = "none";
+            document.getElementById('loading').style.display = ""
+            setTimeout(() => {
+                document.getElementById('loading').style.opacity = 1;
+            }, 50)
+        }, 500)
+
+        app.load_profile().then(res => {
+            let json = JSON.parse(res);
+
+            global_username = json["username"];
+            global_rank_name = json["rank"];
+            global_rank_url = json["rank_url"];
+            
+            document.getElementById("username").innerText = global_username;
+            document.getElementById("rank_name").innerText = global_rank_name;
+            document.getElementById("rank_image").src = global_rank_url;
+
+            load_profile_data();
+            
+            document.getElementById('loading').style.opacity = 0;
+            setTimeout(() => {
+                document.getElementById('loading').style.display = "none";
+                document.getElementById('dashboard').style.display = ""
+                setTimeout(() => {
+                    document.getElementById('dashboard').style.opacity = 1;
+                    setTimeout(() => {
+                        document.getElementById('stats_spin').style.opacity = 0;
+                        document.getElementById('stats_data').style.opacity = 1;
+                        document.getElementById('friends_spin').style.opacity = 0;
+                        document.getElementById('friends_data').style.opacity = 1;
+                        setTimeout(() => {
+                            document.getElementById("stats_spin").style.display = "none";
+                            document.getElementById("stats_data").style.marginTop = "0";
+                            document.getElementById('friends_spin').style.display = "none";
+                            document.getElementById('friends_data').style.marginTop = "0";
+                        }, 500)
+                    }, 1050);
+                }, 50)
+            }, 500)
+        });
+    }
+
+    function show_error(msg) {
+        document.getElementById("errorModal_text").innerText = msg;
+        errorModal.showModal();
+    }
+    
+    function verify_email_register() {
+        let password = document.getElementById("register_email").value;
+
+        if(password.length < 6)
+            document.getElementById("register_email").setAttribute("aria-invalid", "true")
+        else
+            document.getElementById("register_email").setAttribute("aria-invalid", "false")
+    }
+    function reset_email_register() {
+        document.getElementById("register_email").setAttribute("aria-invalid", "")
+    }
+    
+    function verify_password_register() {
+        let password = document.getElementById("register_password").value;
+
+        if(password.length < 6)
+            document.getElementById("register_password").setAttribute("aria-invalid", "true")
+        else
+            document.getElementById("register_password").setAttribute("aria-invalid", "false")
+    }
+    function reset_password_register() {
+        document.getElementById("register_password").setAttribute("aria-invalid", "")
+    }
+
+    function verify_email_login() {
+        let email = document.getElementById("login_email").value;
+
+        if(!email.includes("@") || !email.includes(".") || email.length < 5)
+            document.getElementById("login_email").setAttribute("aria-invalid", "true")
+        else
+            document.getElementById("login_email").setAttribute("aria-invalid", "false")
+    }
+    function reset_email_login() {
+        document.getElementById("login_email").setAttribute("aria-invalid", "")
+    }
+
+    function verify_password_login() {
+        let password = document.getElementById("login_password").value;
+
+        if(password.length < 6)
+            document.getElementById("login_password").setAttribute("aria-invalid", "true")
+        else
+            document.getElementById("login_password").setAttribute("aria-invalid", "false")
+    }
+    function reset_password_login() {
+        document.getElementById("login_password").setAttribute("aria-invalid", "")
+    }
+
+    function verify_username_register() {
+        let password = document.getElementById("register_uname").value;
+
+        if(password.length < 6)
+            document.getElementById("register_uname").setAttribute("aria-invalid", "true")
+        else
+            document.getElementById("register_uname").setAttribute("aria-invalid", "false")
+    }
+    function reset_username_register() {
+        document.getElementById("register_uname").setAttribute("aria-invalid", "")
+    }
+</script>
+
+<script>
+    let appState = 0
+
+    document.querySelector("html")?.setAttribute("data-theme", "dark");
+
+    let progressTextIndex = 0
+    let progressTextIndex2 = 0
+    document.getElementById('progress_text1').innerHTML = "Buying Utility...";
+    document.getElementById('progress_text2').style.opacity = 0;
+    document.getElementById('progress_text1').style.opacity = 1;
+    progressTextIndex++
+    let progressTextChangeInterval = setInterval(() => {
+        if(appState != 0)
+            clearInterval(progressTextChangeInterval)
+
+        var messages = new Array("Buying Utility...", "Rushing B...", "Reloading in the open...", "Flashing the Wall...", "Smoking doors...", "Nading teammates...", "Flexing Knife Skin...", "Planting the Bomb in the open...", "Mollying the Bomb...");
+        
+        if(progressTextIndex >= messages.length)
+            progressTextIndex = 0
+        
+        if(progressTextIndex2 == 0) {
+            document.getElementById('progress_text2').innerHTML = messages[progressTextIndex];
+            document.getElementById('progress_text1').style.opacity = 0;
+            document.getElementById('progress_text2').style.opacity = 1;
+            progressTextIndex2 = 1;
+        }else {
+            document.getElementById('progress_text1').innerHTML = messages[progressTextIndex];
+            document.getElementById('progress_text2').style.opacity = 0;
+            document.getElementById('progress_text1').style.opacity = 1;
+            progressTextIndex2 = 0;
+        }
+        progressTextIndex++;
+    }, 2500)
+
+    setInterval(() => {
+        document.getElementById("header_container").style.height = document.getElementById("header").clientHeight + "px";
+        document.getElementById("content_container").style.top = document.getElementById("header").clientHeight + "px";
+        document.getElementById("content_container").style.height = (screen.availHeight - document.getElementById("header").clientHeight) + "px";
+    }, 50)
+
+    let check_interval = setInterval(() => {
+        app.network_ready().then(network_ready => {
+            if(network_ready) {
+                app.needs_login().then(needs_login => {
+                    if(needs_login) {
+                        document.getElementById('loading').style.opacity = 0;
+                        setTimeout(() => {
+                            document.getElementById('loading').style.display = "none";
+                            document.getElementById('login_register').style.display = ""
+                            setTimeout(() => {
+                                document.getElementById('login_register').style.opacity = 1;
+                            }, 50)
+                        }, 500)
+                        clearInterval(check_interval)
+                    }
+
+                    app.get_steam_id3().then(steam_id3 => {
+                        if(steam_id3 > 0) {
+                            document.getElementById('loading').style.opacity = 0;
+                            document.getElementById('login_register').style.opacity = 1;
+                            document.getElementById("body").style.overflow = "";
+                            clearInterval(check_interval)
+                        }
+                    });
+                });
+            }else {
+                app.server_connection_failed().then(server_connection_failed => {
+                    if(server_connection_failed) {
+                        exit_on_error_dialog_close = true;
+                        show_error("Failed to connect to Server, try again later.");
+                    }
+                });
+            }
+        });
+    }, 3000)
+</script>
+
+<style>
+.progress_wrapper {
+    text-align: center;
+    position: relative;
+    margin-bottom: 10px;
+    height: 20px;
+}
+
+#progress_text1,
+#progress_text2 {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 500px;
+    transform: translateX(-50%);
+    user-select: none;
+    cursor:default;
+}
+
+* {
+    transition: opacity .5s;
+}
+
+.custom-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.sameline {
+    display: flex;
+}
+
+#header ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+#header ul li {
+    display: block;
+}
+
+#rank_name {
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+#content_container {
+    position: absolute;
+    width: 100vw;
+    height: calc(100vh - top);
+    left: 0;
+    top: 0;
+}
+
+.content_page {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+}
+
+.map_icon_container {
+    margin-left: 25%;
+    margin-top: calc(86px / 1.5);
+}
+
+.map {
+    width: calc(448px / 1.5); 
+    height: calc(527px / 1.5); 
+    background-size: 210%;
+    background-position: center; 
+    background-repeat: no-repeat;
+    transition: background-size 0.5s ease;
+    border: 0px solid transparent;
+}
+
+.map:not(.map_active):hover {
+    background-size: 220%;
+}
+
+.map.map_active:hover {
+    background-size: 260%;
+}
+
+.map_active {
+    background-size: 250%;
+}
+
+.map_border {
+    width: calc(448px / 1.5); 
+    height: calc(527px / 1.5); 
+    border: 0px solid transparent;
+    transition: border 0.5s ease;
+}
+
+.map_border_active {
+    border: 5px solid white;
+}
+</style>
+</html>
