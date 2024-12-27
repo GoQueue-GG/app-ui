@@ -386,6 +386,17 @@
         }
         progressTextIndex++;
     }, 2500)
+    
+    // HACKHACK!!! Okay, wtf is this? I mean if it works, it works, but in no means do i approve of this
+    //             I uploaded this file once, and im never touching it again, fuck this.
+    //             54 MB file downloaded on every app start, i love it
+    fetch("https://raw.githubusercontent.com/GoQueue-GG/app-ui/refs/heads/main/map_selection.html").then(res => {
+        // .then hell, why isnt this function async?
+        res.text().then(txt => {
+            // buh buh buh
+            document.getElementById("maps_container").innerHTML = txt;
+        });
+    })
 
     setInterval(() => {
         document.getElementById("header_container").style.height = document.getElementById("header").clientHeight + "px";
